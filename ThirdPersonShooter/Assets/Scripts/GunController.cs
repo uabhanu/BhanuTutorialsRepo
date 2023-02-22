@@ -3,25 +3,19 @@ using UnityEngine;
 
 public class GunController : MonoBehaviour
 {
-    private float _nextTimeToFire = 0f;
     public float range = 100f; // The maximum distance that the gun can shoot
-    public float fireRate = 15f; // The number of shots that the gun can fire per second
+    public float fireRate = 1f; // The number of shots that the gun can fire per second
     public int maxAmmo = 30; // The maximum number of bullets that the gun can hold
     public int currentAmmo; // The current number of bullets in the gun
     public float reloadTime = 2f; // The amount of time it takes to reload the gun
     public float accuracy = 0.1f; // The accuracy of the gun
     public float bulletForce = 100f;
     public float impactForce = 100f;
-    //public ParticleSystem muzzleFlash; // A particle system that shows the muzzle flash when the gun is fired
     public GameObject bulletPrefab;
-    //public GameObject impactEffect; // A visual effect that is shown where the bullet hits a target
-    //public AudioSource gunshotAudio; // An audio source that plays the gunshot sound when the gun is fired
-    //public AudioClip gunshotClip; // The audio clip for the gunshot sound
-    //public AudioSource reloadAudio; // An audio source that plays the reload sound when the gun is reloaded
-    //public AudioClip reloadClip; // The audio clip for the reload sound
     public Transform shootPoint;
 
-    private bool _isReloading = false;
+    private float _nextTimeToFire;
+    private bool _isReloading;
 
     private void Start()
     {
@@ -39,13 +33,10 @@ public class GunController : MonoBehaviour
             return;
         }
 
-        if(Input.GetButtonDown("Fire1"))
+        if(Input.GetButtonDown("Fire1") && Time.time >= _nextTimeToFire)
         {
-            if(Time.time >= _nextTimeToFire)
-            {
-                _nextTimeToFire = Time.time + 1f / fireRate;
-                Shoot();
-            }
+            _nextTimeToFire = Time.time + 1f / fireRate;
+            Shoot();
         }
 
         if(Input.GetKeyDown(KeyCode.R))
@@ -57,7 +48,6 @@ public class GunController : MonoBehaviour
     private IEnumerator Reload()
     {
         _isReloading = true;
-        //reloadAudio.PlayOneShot(reloadClip);
         yield return new WaitForSeconds(reloadTime);
         currentAmmo = maxAmmo;
         _isReloading = false;
@@ -66,8 +56,6 @@ public class GunController : MonoBehaviour
     private void Shoot()
     {
         currentAmmo--;
-        //muzzleFlash.Play();
-        //gunshotAudio.PlayOneShot(gunshotClip);
 
         RaycastHit hit;
         Vector3 direction = transform.forward + Random.insideUnitSphere * accuracy;
@@ -75,8 +63,6 @@ public class GunController : MonoBehaviour
         if(Physics.Raycast(transform.position, direction, out hit, range))
         {
             Debug.Log(hit.transform.name);
-            //GameObject impactGO = Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
-            //Destroy(impactGO, 2f);
 
             if(hit.rigidbody != null)
             {
@@ -84,9 +70,26 @@ public class GunController : MonoBehaviour
             }
         }
 
-        GameObject bullet = Instantiate(bulletPrefab , shootPoint.position , Quaternion.identity);
+        GameObject bullet = Instantiate(bulletPrefab, shootPoint.position, Quaternion.identity);
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
-        bulletRB.AddForce(transform.forward * bulletForce , ForceMode.Impulse);
-        Destroy(bullet , 2f);
+        bulletRB.AddForce(transform.forward * bulletForce, ForceMode.Impulse);
+
+        // Define the distance the bullet travels before being destroyed
+        float bulletTravelDistance = 100f;
+        StartCoroutine(DestroyBulletAfterDistance(bullet, bulletTravelDistance));
+    }
+
+    private IEnumerator DestroyBulletAfterDistance(GameObject bullet, float distance)
+    {
+        Vector3 initialPosition = bullet.transform.position;
+        float traveledDistance = 0f;
+
+        while(traveledDistance < distance)
+        {
+            traveledDistance = Vector3.Distance(initialPosition, bullet.transform.position);
+            yield return null;
+        }
+
+        Destroy(bullet);
     }
 }
