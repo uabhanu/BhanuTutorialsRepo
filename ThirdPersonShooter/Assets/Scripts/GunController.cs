@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class GunController : MonoBehaviour
 {
+    private float _nextTimeToFire = 0f;
     public float range = 100f; // The maximum distance that the gun can shoot
     public float fireRate = 15f; // The number of shots that the gun can fire per second
     public int maxAmmo = 30; // The maximum number of bullets that the gun can hold
@@ -20,7 +21,6 @@ public class GunController : MonoBehaviour
     //public AudioClip reloadClip; // The audio clip for the reload sound
     public Transform shootPoint;
 
-    private float _nextTimeToFire = 0f;
     private bool _isReloading = false;
 
     private void Start()
@@ -39,10 +39,13 @@ public class GunController : MonoBehaviour
             return;
         }
 
-        if(Input.GetButton("Fire1") && Time.time >= _nextTimeToFire)
+        if(Input.GetButtonDown("Fire1"))
         {
-            _nextTimeToFire = Time.time + 1f / fireRate;
-            Shoot();
+            if(Time.time >= _nextTimeToFire)
+            {
+                _nextTimeToFire = Time.time + 1f / fireRate;
+                Shoot();
+            }
         }
 
         if(Input.GetKeyDown(KeyCode.R))
@@ -86,5 +89,4 @@ public class GunController : MonoBehaviour
         bulletRB.AddForce(transform.forward * bulletForce , ForceMode.Impulse);
         Destroy(bullet , 2f);
     }
-
 }
