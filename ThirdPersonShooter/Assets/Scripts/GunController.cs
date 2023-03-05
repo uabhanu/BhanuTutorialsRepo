@@ -3,19 +3,19 @@ using UnityEngine;
 
 public class GunController : MonoBehaviour
 {
-    public float range = 100f; // The maximum distance that the gun can shoot
-    public float fireRate = 1f; // The number of shots that the gun can fire per second
-    public int maxAmmo = 30; // The maximum number of bullets that the gun can hold
-    public int currentAmmo; // The current number of bullets in the gun
-    public float reloadTime = 2f; // The amount of time it takes to reload the gun
-    public float accuracy = 0.1f; // The accuracy of the gun
-    public float bulletForce = 100f;
-    public float impactForce = 100f;
-    public GameObject bulletPrefab;
-    public Transform shootPoint;
-
-    private float _nextTimeToFire;
     private bool _isReloading;
+    private float _nextTimeToFire;
+    
+    [SerializeField] private float range = 100f; // The maximum distance that the gun can shoot
+    [SerializeField] private float fireRate = 1f; // The number of shots that the gun can fire per second
+    [SerializeField] private int maxAmmo = 30; // The maximum number of bullets that the gun can hold
+    [SerializeField] private int currentAmmo; // The current number of bullets in the gun
+    [SerializeField] private float reloadTime = 2f; // The amount of time it takes to reload the gun
+    //[SerializeField] private float accuracy = 0.1f; // The accuracy of the gun
+    [SerializeField] private float bulletForce = 100f;
+    [SerializeField] private float impactForce = 100f;
+    [SerializeField] private GameObject bulletPrefab;
+    [SerializeField] private Transform barrelTransform;
 
     private void Start()
     {
@@ -45,6 +45,21 @@ public class GunController : MonoBehaviour
         }
     }
     
+    private IEnumerator DestroyBulletAfterDistance(GameObject bullet , float distance)
+    {
+        Vector3 initialPosition = bullet.transform.position;
+        
+        float traveledDistance = 0f;
+
+        while(traveledDistance < distance)
+        {
+            traveledDistance = Vector3.Distance(initialPosition , bullet.transform.position);
+            yield return null;
+        }
+
+        Destroy(bullet);
+    }
+    
     private IEnumerator Reload()
     {
         _isReloading = true;
@@ -58,9 +73,11 @@ public class GunController : MonoBehaviour
         currentAmmo--;
 
         RaycastHit hit;
-        Vector3 direction = transform.forward + Random.insideUnitSphere * accuracy;
-        
-        if(Physics.Raycast(transform.position, direction, out hit, range))
+
+        // Use the barrelTransform's right direction instead of forward direction
+        Vector3 direction = barrelTransform.right;
+
+        if(Physics.Raycast(barrelTransform.position , direction , out hit , range))
         {
             Debug.Log(hit.transform.name);
 
@@ -70,26 +87,14 @@ public class GunController : MonoBehaviour
             }
         }
 
-        GameObject bullet = Instantiate(bulletPrefab, shootPoint.position, Quaternion.identity);
+        GameObject bullet = Instantiate(bulletPrefab , barrelTransform.position , Quaternion.identity);
         Rigidbody bulletRB = bullet.GetComponent<Rigidbody>();
-        bulletRB.AddForce(transform.forward * bulletForce, ForceMode.Impulse);
+
+        // Use the barrelTransform's right direction instead of forward direction
+        bulletRB.AddForce(barrelTransform.right * bulletForce , ForceMode.Impulse);
 
         // Define the distance the bullet travels before being destroyed
         float bulletTravelDistance = 100f;
-        StartCoroutine(DestroyBulletAfterDistance(bullet, bulletTravelDistance));
-    }
-
-    private IEnumerator DestroyBulletAfterDistance(GameObject bullet, float distance)
-    {
-        Vector3 initialPosition = bullet.transform.position;
-        float traveledDistance = 0f;
-
-        while(traveledDistance < distance)
-        {
-            traveledDistance = Vector3.Distance(initialPosition, bullet.transform.position);
-            yield return null;
-        }
-
-        Destroy(bullet);
+        StartCoroutine(DestroyBulletAfterDistance(bullet , bulletTravelDistance));
     }
 }
